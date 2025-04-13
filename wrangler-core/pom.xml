@@ -32,6 +32,11 @@
     </repository>
   </repositories>
 
+  <properties>
+    <maven.compiler.source>1.8</maven.compiler.source> <!-- Java 8, update if needed -->
+    <maven.compiler.target>1.8</maven.compiler.target> <!-- Java 8, update if needed -->
+  </properties>
+
   <dependencies>
 
     <!-- Internal -->
@@ -96,13 +101,13 @@
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-module-junit4</artifactId>
-      <version>2.0.2</version>
+      <version>2.0.9</version> <!-- Updated to version 2.0.9 -->
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-api-mockito2</artifactId>
-      <version>2.0.2</version>
+      <version>2.0.9</version> <!-- Updated to version 2.0.9 -->
       <scope>test</scope>
     </dependency>
 
@@ -263,7 +268,6 @@
       <artifactId>hapi-base</artifactId>
       <version>${hl7.version}</version>
     </dependency>
-    <!-- These are structure JARs for HL7 v2.1 and 2.5.1 (as an example) -->
     <dependency>
       <groupId>ca.uhn.hapi</groupId>
       <artifactId>hapi-structures-v21</artifactId>
@@ -279,47 +283,21 @@
       <artifactId>hapi-structures-v23</artifactId>
       <version>${hl7.version}</version>
     </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi</groupId>
-      <artifactId>hapi-structures-v231</artifactId>
-      <version>${hl7.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi</groupId>
-      <artifactId>hapi-structures-v24</artifactId>
-      <version>${hl7.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi</groupId>
-      <artifactId>hapi-structures-v25</artifactId>
-      <version>${hl7.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi</groupId>
-      <artifactId>hapi-structures-v251</artifactId>
-      <version>${hl7.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi</groupId>
-      <artifactId>hapi-structures-v26</artifactId>
-      <version>${hl7.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.cdap.cdap</groupId>
-      <artifactId>cdap-system-app-api</artifactId>
-      <version>${cdap.version}</version>
-    </dependency>
+
   </dependencies>
 
-
   <build>
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.22.2</version>
+        <configuration>
+          <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+        </configuration>
+      </plugin>
+      
+
       <plugin>
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-maven-plugin</artifactId>
@@ -334,29 +312,6 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>buildnumber-maven-plugin</artifactId>
-        <version>1.0</version>
-        <executions>
-          <execution>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>create</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <doCheck>true</doCheck>
-          <doUpdate>false</doUpdate>
-          <revisionOnScmFailure>false</revisionOnScmFailure>
-          <format>{0,date,yyyy-MM-dd-HH:mm:ss}_{1}</format>
-          <items>
-            <item>timestamp</item>
-            <item>${user.name}</item>
-          </items>
-        </configuration>
       </plugin>
     </plugins>
   </build>

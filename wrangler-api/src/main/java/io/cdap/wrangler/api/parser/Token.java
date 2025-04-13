@@ -33,6 +33,11 @@ import java.io.Serializable;
  */
 @PublicEvolving
 public interface Token extends Serializable {
+
+  // New constants for BYTE_SIZE and TIME_DURATION token types
+  public static final String BYTE_SIZE = "BYTE_SIZE";
+  public static final String TIME_DURATION = "TIME_DURATION";
+
   /**
    * Returns the {@code value} of the object wrapped by the
    * implementation of this interface.
@@ -53,7 +58,16 @@ public interface Token extends Serializable {
    * The class implementing this interface will return the {@code JsonElement}
    * instance including the values of the object.
    *
-   * @return {@code JsonElement} object containing members of  implementing class.
+   * @return {@code JsonElement} object containing members of implementing class.
    */
   JsonElement toJson();
+  
+  // Factory methods for creating ByteSize and TimeDuration tokens
+  public static Token createByteSizeToken(String value) {
+    return new ByteSize(value); // Assuming ByteSize is a class that implements Token
+  }
+
+  public static Token createTimeDurationToken(String value) {
+    return new TimeDuration(value); // Assuming TimeDuration is a class that implements Token
+  }
 }

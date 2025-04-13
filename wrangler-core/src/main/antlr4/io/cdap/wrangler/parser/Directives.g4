@@ -46,26 +46,29 @@ recipe
  ;
 
 statements
- :  ( Comment | macro | directive ';' | pragma ';' | ifStatement)*
+ :  ( Comment | macro | directive ';' | pragma ';' | ifStatement)* 
  ;
 
 directive
  : command
-  (   codeblock
-    | identifier
-    | macro
-    | text
-    | number
-    | bool
-    | column
-    | colList
-    | numberList
-    | boolList
-    | stringList
-    | numberRanges
-    | properties
-  )*?
-  ;
+   (
+     codeblock
+     | identifier
+     | macro
+     | text
+     | number
+     | bool
+     | column
+     | colList
+     | numberList
+     | boolList
+     | stringList
+     | numberRanges
+     | properties
+     | byteSizeArg
+     | timeDurationArg
+   )*
+ ;
 
 ifStatement
   : ifStat elseIfStat* elseStat? '}'
@@ -195,7 +198,6 @@ identifierList
  : Identifier (',' Identifier)*
  ;
 
-
 /*
  * Following are the Lexer Rules used for tokenizing the recipe.
  */
@@ -206,8 +208,8 @@ Or       : '||';
 And      : '&&';
 Equals   : '==';
 NEquals  : '!=';
-GTEquals : '>=';
-LTEquals : '<=';
+GTEquals : '>='; 
+LTEquals : '<='; 
 Match    : '=~';
 NotMatch : '!~';
 QuestionColon : '?:';
@@ -215,41 +217,40 @@ StartsWith : '=^';
 NotStartsWith : '!^';
 EndsWith : '=$';
 NotEndsWith : '!$';
-PlusEqual : '+=';
-SubEqual : '-=';
-MulEqual : '*=';
-DivEqual : '/=';
-PerEqual : '%=';
-AndEqual : '&=';
-OrEqual  : '|=';
-XOREqual : '^=';
+PlusEqual : '+='; 
+SubEqual : '-='; 
+MulEqual : '*='; 
+DivEqual : '/='; 
+PerEqual : '%='; 
+AndEqual : '&='; 
+OrEqual  : '|='; 
+XOREqual : '^='; 
 Pow      : '^';
 External : '!';
 GT       : '>';
 LT       : '<';
-Add      : '+';
-Subtract : '-';
-Multiply : '*';
-Divide   : '/';
-Modulus  : '%';
-OBracket : '[';
-CBracket : ']';
-OParen   : '(';
-CParen   : ')';
-Assign   : '=';
-Comma    : ',';
-QMark    : '?';
-Colon    : ':';
-Dot      : '.';
-At       : '@';
-Pipe     : '|';
-BackSlash: '\\';
-Dollar   : '$';
+Add      : '+'; 
+Subtract : '-'; 
+Multiply : '*'; 
+Divide   : '/'; 
+Modulus  : '%'; 
+OBracket : '['; 
+CBracket : ']'; 
+OParen   : '('; 
+CParen   : ')'; 
+Assign   : '='; 
+Comma    : ','; 
+QMark    : '?'; 
+Colon    : ':'; 
+Dot      : '.'; 
+At       : '@'; 
+Pipe     : '|'; 
+BackSlash: '\\'; 
+Dollar   : '$'; 
 Tilde    : '~';
 
-
 Bool
- : 'true'
+ : 'true' 
  | 'false'
  ;
 
@@ -258,15 +259,15 @@ Number
  ;
 
 Identifier
- : [a-zA-Z_\-] [a-zA-Z_0-9\-]*
+ : [a-zA-Z_\-] [a-zA-Z_0-9\-]* 
  ;
 
 Macro
- : [a-zA-Z_] [a-zA-Z_0-9]*
+ : [a-zA-Z_] [a-zA-Z_0-9]* 
  ;
 
 Column
- : ':' [a-zA-Z_\-] [:a-zA-Z_0-9\-]*
+ : ':' [a-zA-Z_\-] [:a-zA-Z_0-9\-]* 
  ;
 
 String
@@ -282,9 +283,9 @@ EscapeSequence
 
 fragment
 OctalEscape
-   :   '\\' ('0'..'3') ('0'..'7') ('0'..'7')
-   |   '\\' ('0'..'7') ('0'..'7')
-   |   '\\' ('0'..'7')
+   :   '\\' ('0'..'3') ('0'..'7') ('0'..'7') 
+   |   '\\' ('0'..'7') ('0'..'7') 
+   |   '\\' ('0'..'7') 
    ;
 
 fragment
@@ -310,4 +311,33 @@ fragment Int
 
 fragment Digit
  : [0-9]
+ ;
+
+
+
+// Lexer Rules for BYTE_SIZE and TIME_DURATION
+BYTE_SIZE
+  : [0-9]+ ('.' [0-9]+)? BYTE_UNIT
+  ;
+
+fragment BYTE_UNIT
+  : [KkMmGgTt][Bb]
+  ;
+
+TIME_DURATION
+  : [0-9]+ ('.' [0-9]+)? TIME_UNIT
+  ;
+
+fragment TIME_UNIT
+  : 'ms' | 's' | 'm' | 'h'
+  ;
+
+
+// Additional parsing rules for byte size and time duration arguments
+byteSizeArg
+ : BYTE_SIZE
+ ;
+
+timeDurationArg
+ : TIME_DURATION
  ;

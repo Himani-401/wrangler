@@ -28,7 +28,6 @@ import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginConfigurer;
 import io.cdap.cdap.api.plugin.PluginProperties;
 import io.cdap.cdap.api.service.http.HttpServiceContext;
-import io.cdap.cdap.api.service.worker.SystemAppTaskContext;
 import io.cdap.cdap.etl.api.StageContext;
 import io.cdap.cdap.etl.api.Transform;
 import io.cdap.wrangler.api.Directive;
@@ -48,89 +47,32 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import javax.annotation.Nullable;
 
 /**
- * A User Executor Registry in a collection of user defined directives. The
- * class <tt>UserDirectiveRegistry</tt> loads the directive either as an
- * {@link ArtifactInfo} or through the use of the context in which it is running.
- *
- * This class provides two constructors for two different context in which the
- * user defined directives are loaded.
- *
- * <p>One context is the service context in which construction of this object
- * would result in investigating all the different artifacts that are of type
- * {@link Directive#TYPE} and creating a classloader for the same. The classload is
- * then used to create an instance of plugin, in this case it's a directive and
- * extract all the <tt>DirectiveInfo</tt> from the instance of directive created.</p>
- *
- * <p>Second context is the <tt>Transform</tt> plugin, were the second constructor
- * of this class in used to initialize. Initializing this class using <tt>StageContext</tt>
- * provides a way to create an instance of the plugin. The name of the directive is
- * used as the <tt>id</tt> for the plugin.</p>
- *
- * @see SystemDirectiveRegistry
- * @see CompositeDirectiveRegistry
+ * A User Executor Registry in a collection of user defined directives.
  */
 public final class UserDirectiveRegistry implements DirectiveRegistry {
   private static final String WRANGLER_TRANSFORM = "wrangler-transform";
   private static final String WRANGLER_PLUGIN = "Wrangler";
+
   private final Map<String, Map<String, DirectiveInfo>> registry = new ConcurrentSkipListMap<>();
   private final List<CloseableClassLoader> classLoaders = new ArrayList<>();
   private StageContext context;
   private HttpServiceContext manager;
   private ArtifactSummary wranglerArtifact;
-  private SystemAppTaskContext systemAppTaskContext;
 
   /**
-   * This constructor should be used when initializing the registry from <tt>Service</tt>.
-   *
-   * <p><tt>Service</tt> context implements {@link ArtifactManager} interface so it should
-   * be readily assignable.</p>
-   *
-   * <p>Using the <tt>ArtifactManager</tt>, all the artifacts are inspected to check for
-   * the artifacts that contain plugins of type <tt>Directive#Type</tt>. For all those plugins,
-   * an instance of the plugin is created to extract the annotated and basic information.</p>
-   *
-   * @param manager an instance of {@link ArtifactManager}.
+   * Constructor for service context.
    */
   public UserDirectiveRegistry(HttpServiceContext manager) {
     this.manager = manager;
   }
 
   /**
-   * This constructor is used when creating from remote task
-   * @param systemAppTaskContext {@link SystemAppTaskContext}
-   */
-  public UserDirectiveRegistry(SystemAppTaskContext systemAppTaskContext) {
-    this.systemAppTaskContext = systemAppTaskContext;
-  }
-
-  /**
-   * This constructor is used when constructing this object in the context of <tt>Transform</tt>.
-   *
-   * A instance of {@link StageContext} is passed to load plugin. <tt>Context</tt> allows
-   * loading the plugin from the repository. The directive name is used as the plugin id for
-   * loading the class.
-   *
-   * @param context of <tt>Stage</tt> in <tt>Transform</tt>.
+   * Constructor for transform context.
    */
   public UserDirectiveRegistry(StageContext context) {
     this.context = context;
   }
 
-  /**
-   * This method provides information about the directive that is being requested.
-   *
-   * <p>First, the directive is checked for existence with the internal registry.
-   * If the directive does not exits in the registry and the <tt>context</tt> is not null, then
-   * it's attempted to be loaded as a user plugin. If it does not exist there a null is returned.
-   * But, if the plugin exists, then it's loaded and an entry is made into the registry. </p>
-   *
-   * <p>When invoked through a readable, each plugin is assigned a unique id. The unique
-   * id is generated during the <code>configure</code> phase of the plugin. Those ids are
-   * passed to initialize through the properties.</p>
-   *
-   * @param name of the directive to be retrived from the registry.
-   * @return an instance of {@link DirectiveInfo} if found, else null.
-   */
   @Override
   public DirectiveInfo get(String namespace, String name) throws DirectiveLoadException {
     DirectiveInfo directiveInfo = registry.getOrDefault(namespace, Collections.emptyMap()).get(name);
@@ -147,7 +89,6 @@ public final class UserDirectiveRegistry implements DirectiveRegistry {
                           "Please check if the artifact containing UDD is still present.", name)
         );
       }
-      // We don't know about the artifactId if the registry is empty, meaning the reload method was not called.
       return DirectiveInfo.fromUser(directive, null);
     } catch (IllegalArgumentException e) {
       throw new DirectiveLoadException(
@@ -165,8 +106,7 @@ public final class UserDirectiveRegistry implements DirectiveRegistry {
     if (context != null) {
       return context.loadPluginClass(name);
     }
-    PluginConfigurer configurer = manager != null ?
-      manager.createPluginConfigurer(namespace) : systemAppTaskContext.createPluginConfigurer(namespace);
+    PluginConfigurer configurer = manager.createPluginConfigurer(namespace);
     return configurer.usePluginClass(Directive.TYPE, name, UUID.randomUUID().toString(),
                                      PluginProperties.builder().build());
   }
@@ -222,17 +162,17 @@ public final class UserDirectiveRegistry implements DirectiveRegistry {
 
         MapDifference<String, DirectiveInfo> difference = Maps.difference(currentRegistry, newRegistry);
 
-        // Remove elements from the registry that are not present in newly loaded registry
+        // Remove old
         for (String directive : difference.entriesOnlyOnLeft().keySet()) {
           currentRegistry.remove(directive);
         }
 
-        // Update common directives
+        // Update common
         for (String directive : difference.entriesInCommon().keySet()) {
           currentRegistry.put(directive, difference.entriesInCommon().get(directive));
         }
 
-        // Update new directives
+        // Add new
         for (String directive : difference.entriesOnlyOnRight().keySet()) {
           currentRegistry.put(directive, difference.entriesOnlyOnRight().get(directive));
         }
@@ -244,8 +184,7 @@ public final class UserDirectiveRegistry implements DirectiveRegistry {
 
   @Nullable
   private ArtifactManager getArtifactManager() {
-    return manager != null ? manager :
-      systemAppTaskContext != null ? systemAppTaskContext.getArtifactManager() : null;
+    return manager;
   }
 
   @Nullable
@@ -254,19 +193,12 @@ public final class UserDirectiveRegistry implements DirectiveRegistry {
     return wranglerArtifact;
   }
 
-  /**
-   * @return Returns an iterator to iterate through all the <code>DirectiveInfo</code> objects
-   * maintained within the registry.
-   */
   @Override
   public Iterable<DirectiveInfo> list(String namespace) {
     Map<String, DirectiveInfo> namespaceDirectives = registry.getOrDefault(namespace, Collections.emptyMap());
     return namespaceDirectives.values();
   }
 
-  /**
-   * Closes any resources acquired during initialization or otherwise.
-   */
   @Override
   public void close() throws IOException {
     for (CloseableClassLoader classLoader : classLoaders) {
